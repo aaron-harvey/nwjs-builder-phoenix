@@ -25,7 +25,8 @@ var MacConfig = /** @class */ (function (_super) {
         _this.plistStrings = {};
         // default filesToSign for Mac
         _this.signing.filesToSignGlobs = [
-            '**/*',
+            '**/Contents/Versions/**/*',
+            '**/Contents/MacOS/nwjs',
         ];
         Object.keys(_this).map(function (key) {
             if (options[key] !== undefined) {
