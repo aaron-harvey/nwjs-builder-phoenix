@@ -15,7 +15,8 @@ export class MacConfig extends SignableConfig {
 
         // default filesToSign for Mac
         this.signing.filesToSignGlobs = [
-            '**/*',
+            "**/Contents/Versions/**/*",
+            "**/Contents/MacOS/nwjs"
         ];
 
         Object.keys(this).map((key) => {
