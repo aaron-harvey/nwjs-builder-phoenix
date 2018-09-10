@@ -25,7 +25,15 @@ var MacConfig = /** @class */ (function (_super) {
         _this.plistStrings = {};
         // default filesToSign for Mac
         _this.signing.filesToSignGlobs = [
-            '**/Contents/Versions/**/*',
+            '**/Contents/Versions/**/libffmpeg.dylib',
+            '**/Contents/Versions/**/nwjs Helper.app',
+            '**/Contents/Versions/**/nwjs Framework.framework/nwjs Framework',
+            '**/Contents/Versions/**/nwjs Framework.framework/Helpers/*',
+            '**/Contents/Versions/**/nwjs Framework.framework/Libraries/*',
+            '**/Contents/Versions/**/nwjs Framework.framework/Resources/*',
+            '**/Contents/Versions/**/nwjs Framework.framework/XPCServices/*',
+            '**/Contents/Versions/**/nwjs Framework.framework/Versions/Current/*',
+            '**/Contents/Versions/**/nwjs Framework.framework/Versions/A/*',
             '**/Contents/MacOS/nwjs',
         ];
         Object.keys(_this).map(function (key) {
