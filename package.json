@@ -4,7 +4,7 @@
   "description": "",
   "main": "./dist/lib/index.js",
   "bin": {
-    "build": "./dist/bin/build.js",
+    "build": "tsc .",
     "run": "./dist/bin/run.js"
   },
   "scripts": {
