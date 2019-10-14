@@ -149,6 +149,21 @@ export function findRuntimeRoot(platform: string, runtimeDir: string): Promise<s
     });
 }
 
+export async function findNodeModulesWithBindingDotGyp(dir: string, pkg: any) {
+    const bindingDotGyps = await execAsync('find **/**/binding.gyp', {
+        cwd: dir,
+    })
+    .then(({
+        stdout, stderr,
+    }) => {
+        return stdout.split(/\r?\n/)
+        .filter(path => path)
+        .map(path => path.split('/').slice(0, 2).join('/'))
+    });
+
+    return bindingDotGyps;
+}
+
 export async function findExcludableDependencies(dir: string, pkg: any) {
 
     const prod = await execAsync('npm ls --prod --parseable', {

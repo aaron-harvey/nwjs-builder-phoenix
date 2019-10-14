@@ -28,6 +28,7 @@ import {
     copyFileAsync,
     fileExistsAsync,
     findExcludableDependencies,
+    findNodeModulesWithBindingDotGyp,
     findExecutable,
     findFFmpeg,
     findRuntimeRoot,
@@ -37,6 +38,7 @@ import {
     spawnAsync,
     tmpDir,
     tmpName,
+    execAsync
 } from './util';
 
 const debug = require('debug')('build:builder');
@@ -125,6 +127,7 @@ export class Builder {
             throw new Error('ERROR_NO_TASK');
         }
 
+        // BV: Concurrency should not be supported if rebuilding native node modules for each platform
         if (this.options.concurrent) {
 
             await Bluebird.map(tasks, async ([platform, arch]) => {
@@ -481,6 +484,16 @@ export class Builder {
 
     }
 
+    protected async rebuildNativeModules(platform: string, arch: string, targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
+        // BV: This function must be run after copyFiles because it operates on node_modules in targetDir
+        // Find node_modules that can be rebuilt - that is those with a binding.gyp
+        const rebuildableNodeModules = await findNodeModulesWithBindingDotGyp(targetDir, pkg);
+        await Promise.all(rebuildableNodeModules.map(async (path) => {
+            console.log('Rebuilding', path);
+            await execAsync(`npm_config_target=0.41.2 npm_config_arch=x64 npm_config_target_arch=${arch} npm_config_runtime=node-webkit npm_config_build_from_source=true npm_config_node_gyp=$(which nw-gyp) nw-gyp rebuild --target=0.41.2`, { cwd: path });
+        }));
+    }
+
     protected async copyFiles(platform: string, targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
 
         const generalExcludes = [
@@ -686,13 +699,19 @@ export class Builder {
             case 'win':
                 await this.prepareWinBuild(targetDir, appRoot, pkg, config);
                 await this.copyFiles(platform, targetDir, appRoot, pkg, config);
-                await this.renameWinApp(targetDir, appRoot, pkg, config);
+                if (config.nativeModules.length === 0) {
+                    // BV: If native modules are involved, keeping nw.exe is best bet
+                    await this.renameWinApp(targetDir, appRoot, pkg, config);
+                } else {
+                    await this.rebuildNativeModules(platform, arch, targetDir, appRoot, pkg, config);
+                }
                 break;
             case 'darwin':
             case 'osx':
             case 'mac':
                 await this.prepareMacBuild(targetDir, appRoot, pkg, config);
                 await this.copyFiles(platform, targetDir, appRoot, pkg, config);
+                await this.rebuildNativeModules(platform, arch, targetDir, appRoot, pkg, config);
                 await this.renameMacApp(targetDir, appRoot, pkg, config);
                 await this.signApp(config.mac, targetDir, config.mac.signing.filesToSignGlobs,
                     [], false);
@@ -896,7 +915,7 @@ export class Builder {
     }
 
     protected async buildTask(platform: string, arch: string, pkg: any, config: BuildConfig) {
-
+        // BV: Mac is pretty much all x64 so this does not matter
         if (platform === 'mac' && arch === 'x86' && !config.nwVersion.includes('0.12.3')) {
             if (!this.options.mute) {
                 console.info(`The NW.js binary for ${ platform }, ${ arch } isn't available for ${ config.nwVersion }, skipped.`);

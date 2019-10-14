@@ -49,11 +49,13 @@ export class Runner {
         ? (this.options.x86 ? 'ia32' : 'x64')
         : process.arch;
 
+        // BV: May need to enable chromeApp to use certain chrome.* APIs
         const pkg: any = await readJson(resolve(this.args[0], this.options.chromeApp ? 'manifest.json' : 'package.json'));
         const config = new BuildConfig(pkg);
 
         debug('in run', 'config', config);
 
+        // BV: Should this be hardcoded to 'sdk'?
         const downloader = new Downloader({
             platform, arch,
             version: config.nwVersion,

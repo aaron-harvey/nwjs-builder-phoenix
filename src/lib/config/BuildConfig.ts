@@ -22,6 +22,7 @@ export class BuildConfig {
     public targets: string[] = [];
     public files: string[] = [ '**/*' ];
     public excludes: string[] = [];
+    public nativeModules: string[] = [];
 
     public win: WinConfig = new WinConfig();
     public mac: MacConfig = new MacConfig();

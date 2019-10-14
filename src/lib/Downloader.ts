@@ -21,7 +21,7 @@ export class Downloader extends DownloaderBase {
     public static DEFAULT_OPTIONS: IDownloaderOptions = {
         platform: process.platform,
         arch: process.arch,
-        version: '0.14.7',
+        version: '0.41.2',
         flavor: 'normal',
         mirror: 'https://dl.nwjs.io/',
         useCaches: true,
@@ -63,6 +63,7 @@ export class Downloader extends DownloaderBase {
 
         try {
             if(await this.isFileExists(path) && await this.isFileSynced(url, path)) {
+                console.info(`in fetch - cache exists: ${path}`);
                 return path;
             }
         }
