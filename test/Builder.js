@@ -32,8 +32,7 @@ test.serial("module", async t => {
       win: true,
       x64: true,
       mirror,
-      mute: false,
-      nativeModules: ["ffi-napi"]
+      mute: false
     },
     dir
   );

@@ -4,7 +4,7 @@
   "description": "",
   "main": "./dist/lib/index.js",
   "bin": {
-    "build": "tsc .",
+    "build": "./dist/bin/build.js",
     "run": "./dist/bin/run.js"
   },
   "scripts": {
@@ -26,7 +26,6 @@
   },
   "homepage": "https://github.com/evshiron/nwjs-builder-phoenix#readme",
   "devDependencies": {
-    "@types/bluebird": "^3.5.3",
     "@types/debug": "0.0.29",
     "@types/dotenv": "^4.0.1",
     "@types/es6-shim": "^0.31.32",

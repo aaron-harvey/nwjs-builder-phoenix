@@ -2,11 +2,12 @@
     "compilerOptions": {
         "outDir": "./dist/",
         "sourceMap": true,
-        "noImplicitAny": true,
+        "noImplicitAny": false,
         "module": "commonjs",
         "target": "es5"
     },
     "include": [
-        "./src/**/*"
+        "./src/**/*",
+        "./src/lib/Builder.d.ts"
     ]
 }
