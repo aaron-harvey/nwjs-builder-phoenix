@@ -4,8 +4,8 @@
   "description": "",
   "main": "./dist/lib/index.js",
   "bin": {
-    "build": "./dist/bin/build.js",
-    "run": "./dist/bin/run.js"
+    "build": "tsc && ./dist/bin/build.js",
+    "run": "tsc && ./dist/bin/run.js"
   },
   "scripts": {
     "prepublish": "npm run build",
