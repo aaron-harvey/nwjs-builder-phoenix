@@ -485,16 +485,17 @@ export class Builder {
     }
 
     protected async rebuildNativeModules(platform: string, arch: string, targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
-        // BV: This function must be run after copyFiles because it operates on node_modules in targetDir
+        // BV: This function must be run after copyFiles because it operates on node_modules in appRoot
         // Find node_modules that can be rebuilt - that is those with a binding.gyp
-        const rebuildableNodeModules = await findNodeModulesWithBindingDotGyp(targetDir, pkg);
+        const rebuildableNodeModules = await findNodeModulesWithBindingDotGyp(appRoot, pkg);
         await Promise.all(rebuildableNodeModules.map(async (path) => {
             console.log('Rebuilding', path);
-            await execAsync(`npm_config_target=0.41.2 npm_config_arch=x64 npm_config_target_arch=${arch} npm_config_runtime=node-webkit npm_config_build_from_source=true npm_config_node_gyp=$(which nw-gyp) nw-gyp rebuild --target=0.41.2`, { cwd: path });
+            let { stderr, stdout  } = await execAsync(`npm_config_target=0.41.2 npm_config_arch=x64 npm_config_target_arch=${arch} npm_config_runtime=node-webkit npm_config_build_from_source=true npm_config_node_gyp=$(which nw-gyp) nw-gyp rebuild --target=0.41.2 --arch=${arch}`, { cwd: path });
+            console.log('Results from rebuilding', path, stderr, stdout);
         }));
     }
 
-    protected async copyFiles(platform: string, targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
+    protected async copyFiles(platform: string, arch: string, targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
 
         const generalExcludes = [
             '**/node_modules/.bin',
@@ -511,6 +512,7 @@ export class Builder {
             });
 
         debug('in copyFiles', 'dependenciesExcludes', dependenciesExcludes);
+        console.log('Excluding dependencies', dependenciesExcludes);
 
         const ignore = [
             ...config.excludes,
@@ -537,6 +539,9 @@ export class Builder {
 
         if (config.packed) {
 
+            // Copy files and write manifest and then compress if windows or linux
+            await this.copyFilesToAppRootAndWriteStrippedManifest(files, platform, arch, targetDir, appRoot, pkg, config);
+
             switch (platform) {
                 case 'win32':
                 case 'win':
@@ -546,15 +551,19 @@ export class Builder {
                         postfix: '.zip',
                     });
 
-                    await compress(this.dir, files.filter((file) => !file.endsWith('/')), 'zip', nwFile);
+                    const filesToCompress = files.indexOf('package.json') !== -1 ? files : files.concat(['package.json']);
+                    const compressedName = await compress(appRoot, filesToCompress, 'zip', nwFile); // files.filter((file) => !file.endsWith('/'))
+                    // await execAsync('ls', { cwd: this.dir });
 
-                    const {path: tempDir} = await tmpDir();
-                    await this.writeStrippedManifest(resolve(tempDir, 'package.json'), pkg, config);
-                    await compress(tempDir, ['./package.json'], 'zip', nwFile);
-                    await remove(tempDir);
+                    // const {path: tempDir} = await tmpDir();
+                    // await this.writeStrippedManifest(resolve(tempDir, 'package.json'), pkg, config);
+                    // await compress(tempDir, ['./package.json'], 'zip', nwFile);
+                    console.log('inCopyFiles', nwFile, compressedName, stdout, stderr);
+                    // await remove(tempDir);
 
                     const executable = await findExecutable(platform, targetDir);
                     await this.combineExecutable(executable, nwFile);
+                    console.log('copy executable', executable);
 
                     await remove(nwFile);
 
@@ -562,13 +571,7 @@ export class Builder {
                 case 'darwin':
                 case 'osx':
                 case 'mac':
-
-                    for (const file of files) {
-                        await copyFileAsync(resolve(this.dir, file), resolve(appRoot, file));
-                    }
-
-                    await this.writeStrippedManifest(resolve(appRoot, 'package.json'), pkg, config);
-
+                    // Done above
                     break;
                 default:
                     throw new Error('ERROR_UNKNOWN_PLATFORM');
@@ -576,15 +579,19 @@ export class Builder {
 
         }
         else {
-
-            for (const file of files) {
-                await copyFileAsync(resolve(this.dir, file), resolve(appRoot, file));
-            }
-
-            await this.writeStrippedManifest(resolve(appRoot, 'package.json'), pkg, config);
-
+            await this.copyFilesToAppRootAndWriteStrippedManifest(files, platform, arch, targetDir, appRoot, pkg, config);
         }
 
+    }
+
+    protected async copyFilesToAppRootAndWriteStrippedManifest(files: string[], platform: string, arch: string, targetDir: string, appRoot: string, pkg: any, config: BuildConfig) {
+        // BV: Do this first then the zip for windows and linux. This also applies to mac. 
+        for (const file of files) {
+            await copyFileAsync(resolve(this.dir, file), resolve(appRoot, file));
+        }
+        await this.writeStrippedManifest(resolve(appRoot, 'package.json'), pkg, config);
+        console.log('Copied files', files);
+        await this.rebuildNativeModules(platform, arch, targetDir, appRoot, pkg, config);
     }
 
     protected async integrateFFmpeg(platform: string, arch: string, targetDir: string, pkg: any, config: BuildConfig) {
@@ -698,27 +705,24 @@ export class Builder {
             case 'win32':
             case 'win':
                 await this.prepareWinBuild(targetDir, appRoot, pkg, config);
-                await this.copyFiles(platform, targetDir, appRoot, pkg, config);
+                await this.copyFiles(platform, arch, targetDir, appRoot, pkg, config);
                 if (config.nativeModules.length === 0) {
                     // BV: If native modules are involved, keeping nw.exe is best bet
                     await this.renameWinApp(targetDir, appRoot, pkg, config);
-                } else {
-                    await this.rebuildNativeModules(platform, arch, targetDir, appRoot, pkg, config);
                 }
                 break;
             case 'darwin':
             case 'osx':
             case 'mac':
                 await this.prepareMacBuild(targetDir, appRoot, pkg, config);
-                await this.copyFiles(platform, targetDir, appRoot, pkg, config);
-                await this.rebuildNativeModules(platform, arch, targetDir, appRoot, pkg, config);
+                await this.copyFiles(platform, arch, targetDir, appRoot, pkg, config);
                 await this.renameMacApp(targetDir, appRoot, pkg, config);
                 await this.signApp(config.mac, targetDir, config.mac.signing.filesToSignGlobs,
                     [], false);
                 break;
             case 'linux':
                 await this.prepareLinuxBuild(targetDir, appRoot, pkg, config);
-                await this.copyFiles(platform, targetDir, appRoot, pkg, config);
+                await this.copyFiles(platform, arch, targetDir, appRoot, pkg, config);
                 await this.renameLinuxApp(targetDir, appRoot, pkg, config);
                 break;
             default:
