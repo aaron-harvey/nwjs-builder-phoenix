@@ -558,7 +558,6 @@ export class Builder {
                     // const {path: tempDir} = await tmpDir();
                     // await this.writeStrippedManifest(resolve(tempDir, 'package.json'), pkg, config);
                     // await compress(tempDir, ['./package.json'], 'zip', nwFile);
-                    console.log('inCopyFiles', nwFile, compressedName, stdout, stderr);
                     // await remove(tempDir);
 
                     const executable = await findExecutable(platform, targetDir);
