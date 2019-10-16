@@ -517,7 +517,7 @@ export class Builder {
         const ignore = [
             ...config.excludes,
             ...generalExcludes,
-            ...dependenciesExcludes,
+            // ...dependenciesExcludes,
             ...[config.output, `${ config.output }/**/*`]
         ];
 
@@ -591,6 +591,12 @@ export class Builder {
         await this.writeStrippedManifest(resolve(appRoot, 'package.json'), pkg, config);
         console.log('Copied files', files);
         await this.rebuildNativeModules(platform, arch, targetDir, appRoot, pkg, config);
+        // After rebuilding native modules, remove dev dependencies
+        await this.removeDevDependenices(appRoot, pkg, config);
+    }
+
+    protected async removeDevDependenices(appRoot: string, pkg: any, config: BuildConfig) {
+        await execAsync(`npm prune --production`, { cwd: appRoot });
     }
 
     protected async integrateFFmpeg(platform: string, arch: string, targetDir: string, pkg: any, config: BuildConfig) {
